@@ -143,6 +143,7 @@ td.date input{width:118px}
     <button class="btn" onclick="importJSONc()">⬆ JSON</button>
     <button class="btn" onclick="exportCSV()">⬇ CSV</button>
     <button class="btn" onclick="importCSVc()">⬆ CSV</button>
+    <button class="btn" onclick="importExcelc()">⬆ Excel (MS Project)</button>
     <button class="btn" onclick="resetSeed()">↺ Datos ejemplo</button>
     <button class="btn" onclick="openCloudModal()">☁ Nube</button>
     <button class="btn" id="accbtn" onclick="openAccessModal()" style="display:none">👥 Accesos</button>
@@ -175,6 +176,7 @@ td.date input{width:118px}
     <button class="btn primary" onclick="addTask()">＋ Tarea</button>
     <button class="btn" onclick="setBaseline()">📌 Fijar base de esta obra</button>
     <button class="btn" style="background:#16a34a;border-color:#16a34a;color:#fff" onclick="finalizeProject()">✔ Finalizar obra</button>
+    <button class="btn" onclick="duplicateProject()">⧉ Duplicar</button>
     <button class="btn" onclick="renameProject()">✎ Renombrar</button>
     <button class="btn danger" onclick="deleteProject()">🗑 Eliminar obra</button>
   </div>
@@ -204,10 +206,12 @@ td.date input{width:118px}
 </div>
 <div id="tip"></div>
 <input type="file" id="fileimp" accept=".json,.csv" style="display:none">
+<input type="file" id="xlsximp" accept=".xlsx,.xls,.xlsm" style="display:none">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const SEED = {"projects": [{"id": "ramallo", "name": "Proyecto Ramallo", "color": "#2563eb", "tasks": [{"id": "R1", "name": "Armado de estructura", "dur": 3, "preds": [], "lag": 0, "fixedStart": "2026-06-23", "baseStart": "2026-06-23", "baseEnd": "2026-06-25"}, {"id": "R2", "name": "Colocación de plegados", "dur": 2, "preds": ["R1"], "lag": 0, "fixedStart": null, "baseStart": "2026-06-26", "baseEnd": "2026-06-29"}, {"id": "R3", "name": "Hormigón o en seco", "dur": 3, "preds": ["R2"], "lag": 0, "fixedStart": null, "baseStart": "2026-06-30", "baseEnd": "2026-07-02"}, {"id": "R4", "name": "Tabiquería de acero", "dur": 2, "preds": ["R3"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-03", "baseEnd": "2026-07-06"}, {"id": "R5", "name": "Estructura de techo y cielorraso", "dur": 2, "preds": ["R4"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-07", "baseEnd": "2026-07-08"}, {"id": "R6", "name": "OSB", "dur": 1, "preds": ["R5"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-09", "baseEnd": "2026-07-09"}, {"id": "R7", "name": "Plomería cañerías", "dur": 2, "preds": ["R6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-10", "baseEnd": "2026-07-13"}, {"id": "R8", "name": "Electricidad cañería y cables", "dur": 2, "preds": ["R6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-10", "baseEnd": "2026-07-13"}, {"id": "R9", "name": "Placas de yeso 9mm", "dur": 2, "preds": ["R7", "R8"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-14", "baseEnd": "2026-07-15"}, {"id": "R10", "name": "Aislación termoacústica Celulosa", "dur": 2, "preds": ["R9"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-16", "baseEnd": "2026-07-17"}, {"id": "R11", "name": "Placas de yeso 12mm", "dur": 3, "preds": ["R10"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-20", "baseEnd": "2026-07-22"}, {"id": "R12", "name": "Masillado, cinta y lijado", "dur": 5, "preds": ["R11"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-23", "baseEnd": "2026-07-29"}, {"id": "R13", "name": "Colocación de porcelanato", "dur": 5, "preds": ["R11"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-23", "baseEnd": "2026-07-29"}, {"id": "R14", "name": "Colocación de muebles / placards", "dur": 2, "preds": ["R12", "R13"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-30", "baseEnd": "2026-07-31"}, {"id": "R15", "name": "Mesada", "dur": 1, "preds": ["R14"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-03", "baseEnd": "2026-08-03"}, {"id": "R16", "name": "Pintura interior", "dur": 2, "preds": ["R15"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-04", "baseEnd": "2026-08-05"}, {"id": "R17", "name": "Griferías y sanitarios", "dur": 2, "preds": ["R16"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-06", "baseEnd": "2026-08-07"}, {"id": "R18", "name": "Colocación de luces y sistemas", "dur": 3, "preds": ["R16"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-06", "baseEnd": "2026-08-10"}, {"id": "R19", "name": "Instalación de aislación y fachada", "dur": 3, "preds": ["R6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-10", "baseEnd": "2026-07-14"}, {"id": "R20", "name": "Colocación de plegados cubierta", "dur": 2, "preds": ["R19"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-15", "baseEnd": "2026-07-16"}, {"id": "R21", "name": "Pintura de cubierta Cauchogoma", "dur": 2, "preds": ["R20"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-17", "baseEnd": "2026-07-20"}, {"id": "R22", "name": "Pedido de aberturas", "dur": 30, "preds": ["R6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-10", "baseEnd": "2026-08-20"}, {"id": "R23", "name": "Terminaciones generales", "dur": 5, "preds": ["R22"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-21", "baseEnd": "2026-08-27"}], "visible": true}, {"id": "junin", "name": "Proyecto Junín 1", "color": "#0891b2", "tasks": [{"id": "J1", "name": "Armado de estructura", "dur": 3, "preds": [], "lag": 0, "fixedStart": "2026-07-13", "baseStart": "2026-07-13", "baseEnd": "2026-07-15"}, {"id": "J2", "name": "Colocación de plegados", "dur": 2, "preds": ["J1"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-16", "baseEnd": "2026-07-17"}, {"id": "J3", "name": "Hormigón o en seco", "dur": 3, "preds": ["J2"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-20", "baseEnd": "2026-07-22"}, {"id": "J4", "name": "Tabiquería de acero", "dur": 2, "preds": ["J3"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-23", "baseEnd": "2026-07-24"}, {"id": "J5", "name": "Estructura de techo y cielorraso", "dur": 2, "preds": ["J4"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-27", "baseEnd": "2026-07-28"}, {"id": "J6", "name": "OSB", "dur": 1, "preds": ["J5"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-29", "baseEnd": "2026-07-29"}, {"id": "J7", "name": "Plomería cañerías", "dur": 2, "preds": ["J6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-30", "baseEnd": "2026-07-31"}, {"id": "J8", "name": "Electricidad cañería y cables", "dur": 2, "preds": ["J7"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-03", "baseEnd": "2026-08-04"}, {"id": "J9", "name": "Placas de yeso 9mm", "dur": 2, "preds": ["J8"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-05", "baseEnd": "2026-08-06"}, {"id": "J10", "name": "Aislación termoacústica Celulosa", "dur": 2, "preds": ["J9"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-07", "baseEnd": "2026-08-10"}, {"id": "J11", "name": "Placas de yeso 12mm", "dur": 3, "preds": ["J10"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-11", "baseEnd": "2026-08-13"}, {"id": "J12", "name": "Masillado, cinta y lijado", "dur": 5, "preds": ["J11"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-14", "baseEnd": "2026-08-20"}, {"id": "J13", "name": "Colocación de porcelanato", "dur": 5, "preds": ["J11"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-14", "baseEnd": "2026-08-20"}, {"id": "J14", "name": "Colocación de muebles / placards", "dur": 2, "preds": ["J12", "J13"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-21", "baseEnd": "2026-08-24"}, {"id": "J15", "name": "Mesada", "dur": 1, "preds": ["J14", "J16"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-25", "baseEnd": "2026-08-25"}, {"id": "J16", "name": "Pintura interior", "dur": 2, "preds": ["J12", "J13"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-21", "baseEnd": "2026-08-24"}, {"id": "J17", "name": "Griferías y sanitarios", "dur": 2, "preds": ["J15"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-26", "baseEnd": "2026-08-27"}, {"id": "J18", "name": "Colocación de luces y sistemas", "dur": 3, "preds": ["J14", "J16"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-25", "baseEnd": "2026-08-27"}, {"id": "J19", "name": "Instalación de aislación y fachada", "dur": 3, "preds": ["J6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-30", "baseEnd": "2026-08-03"}, {"id": "J20", "name": "Colocación de plegados cubierta", "dur": 2, "preds": ["J17", "J18"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-28", "baseEnd": "2026-08-31"}, {"id": "J21", "name": "Pintura de cubierta Cauchogoma", "dur": 2, "preds": ["J20"], "lag": 0, "fixedStart": null, "baseStart": "2026-09-01", "baseEnd": "2026-09-02"}, {"id": "J22", "name": "Pedido de aberturas", "dur": 30, "preds": ["J6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-30", "baseEnd": "2026-09-09"}, {"id": "J23", "name": "Terminaciones generales", "dur": 5, "preds": ["J21"], "lag": 0, "fixedStart": null, "baseStart": "2026-09-03", "baseEnd": "2026-09-09"}], "visible": true}]};
 const LSKEY='ganttObrasV2';
@@ -487,6 +491,79 @@ function renderEditSelect(){
   sel.innerHTML=STORE.projects.map(p=>`<option value="${p.id}" ${p.id===activeId?'selected':''}>${esc(p.name)}</option>`).join('');
 }
 function switchP(id){activeId=id;render();}
+function duplicateProject(){
+  const p=proj();if(!p)return;pushHistory();
+  const base=(p.name.replace(/[^a-zA-Z0-9]/g,'').slice(0,6).toLowerCase()||'obra')+'c';
+  let id=base,n=1;while(STORE.projects.find(x=>x.id===id)){id=base+(++n);}
+  const copy=JSON.parse(JSON.stringify(p));
+  copy.id=id;copy.name=p.name+' (copia)';copy.visible=true;copy.log=[];
+  delete copy.finishedAt;delete copy.pendingDelete;delete copy.status;delete copy.finalReport;
+  STORE.projects.push(copy);activeId=id;render();
+}
+const _MESIN={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
+function parseAnyDate(v){
+  if(v==null||v==='')return null;
+  if(v instanceof Date)return new Date(v.getFullYear(),v.getMonth(),v.getDate());
+  if(typeof v==='number'){const dt=new Date(Math.round((v-25569)*86400000));return new Date(dt.getUTCFullYear(),dt.getUTCMonth(),dt.getUTCDate());}
+  const str=String(v).toLowerCase().trim();
+  let m=str.match(/(\d{1,2})\s+([a-záéíóúñ]+)\s+(\d{4})/);
+  if(m){const mo=_MESIN[m[2].replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i').replace(/ó/g,'o').replace(/ú/g,'u')];if(mo)return new Date(+m[3],mo-1,+m[1]);}
+  m=str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(m){let y=+m[3];if(y<100)y+=2000;return new Date(y,(+m[2])-1,+m[1]);}
+  const d=new Date(str);return isNaN(d)?null:new Date(d.getFullYear(),d.getMonth(),d.getDate());
+}
+function isMF(d){const w=d.getDay();return w!==0&&w!==6;}
+function nextMF(d){let r=new Date(d);do{r.setDate(r.getDate()+1);}while(!isMF(r));return r;}
+function wdCountMF(s,e){let n=0,c=new Date(s);while(c<=e){if(isMF(c))n++;c.setDate(c.getDate()+1);}return n;}
+function importExcelc(){if(typeof XLSX==='undefined'){alert('No se pudo cargar el lector de Excel (¿sin internet?). Reintentá con conexión.');return;}document.getElementById('xlsximp').click();}
+document.getElementById('xlsximp').addEventListener('change',function(){
+  const f=this.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=()=>{try{
+    const wb=XLSX.read(new Uint8Array(rd.result),{type:'array',cellDates:true});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+    const projs=parseMSProject(rows);
+    if(!projs.length){alert('No pude detectar tareas con fecha en la planilla. Revisá que tenga columnas Nombre, Comienzo y Fin.');return;}
+    pushHistory();
+    const cs=['#2563eb','#0891b2','#7c3aed','#db2777','#ea580c','#16a34a','#0d9488','#c026d3'];
+    projs.forEach(p=>{let base=(p.name.replace(/[^a-zA-Z0-9]/g,'').slice(0,6).toLowerCase()||'obra');let id=base,n=1;while(STORE.projects.find(x=>x.id===id)){id=base+(++n);}p.id=id;p.color=cs[STORE.projects.length%cs.length];p.visible=true;STORE.projects.push(p);activeId=id;});
+    render();alert('Importado ✓  '+projs.length+' obra(s), '+projs.reduce((a,p)=>a+p.tasks.length,0)+' tareas.');
+  }catch(e){alert('No se pudo leer el Excel: '+((e&&e.message)||e));}};
+  rd.readAsArrayBuffer(f);this.value='';
+});
+function parseMSProject(rows){
+  // find header row
+  let hi=-1,cName=-1,cStart=-1,cEnd=-1,cDur=-1;
+  for(let i=0;i<Math.min(rows.length,10);i++){
+    const r=(rows[i]||[]).map(x=>String(x).toLowerCase());
+    const ni=r.findIndex(x=>x.includes('nombre'));const si=r.findIndex(x=>x.includes('comienzo')||x.includes('inicio'));const ei=r.findIndex(x=>x==='fin'||x.includes('fin'));
+    if(ni>=0&&si>=0&&ei>=0){hi=i;cName=ni;cStart=si;cEnd=ei;cDur=r.findIndex(x=>x.includes('duraci'));break;}
+  }
+  if(hi<0)return [];
+  const groups=[];let cur=null;
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i]||[];const name=String(r[cName]||'').trim();
+    if(!name)continue;
+    const sd=parseAnyDate(r[cStart]);const ed=parseAnyDate(r[cEnd]);
+    if(/^</.test(name)||/tarea nueva/i.test(name))continue;
+    if(/^proyecto\b/i.test(name)){cur={name:name.replace(/\s+/g,' ').trim(),rows:[]};groups.push(cur);continue;}
+    if(!sd||!ed)continue;
+    if(!cur){cur={name:'Obra importada',rows:[]};groups.push(cur);}
+    cur.rows.push({name,start:sd,end:ed});
+  }
+  // build tasks per group with inferred preds
+  const iso=dt=>dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+  const out=[];
+  groups.forEach(g=>{
+    if(!g.rows.length)return;
+    const pref=(g.name.replace(/[^a-zA-Z]/g,'').slice(0,1).toUpperCase()||'T');
+    const recs=g.rows.map((t,idx)=>({id:pref+(idx+1),name:t.name,start:t.start,end:t.end,dur:Math.max(1,wdCountMF(t.start,t.end))}));
+    recs.forEach(t=>{const preds=recs.filter(u=>u!==t&&u.end<t.start&&iso(nextMF(u.end))===iso(t.start)).map(u=>u.id);t.preds=preds;});
+    const tasks=recs.map(t=>({id:t.id,name:t.name,dur:t.dur,preds:t.preds,lag:0,fixedStart:t.preds.length?null:iso(t.start),baseStart:iso(t.start),baseEnd:iso(t.end)}));
+    out.push({name:g.name,tasks});
+  });
+  return out;
+}
 function addProject(){
   const name=prompt('Nombre de la nueva obra:','Obra nueva');if(!name)return;pushHistory();
   const base=name.replace(/[^a-zA-Z0-9]/g,'').slice(0,6).toLowerCase()||'obra';
