@@ -135,7 +135,7 @@ td.date input{width:118px}
   <div class="ptitle">Obras en la vista</div>
   <div class="toggles" id="toggles"></div>
   <div class="toolbar">
-    <button class="btn" onclick="addProject()">＋ Obra</button>
+    <button class="btn" onclick="newProjectChooser()">＋ Obra</button>
     <button class="btn" onclick="undo()" title="Deshacer (Ctrl+Z)">↶ Deshacer</button>
     <button class="btn" onclick="redo()" title="Rehacer (Ctrl+Y)">↷ Rehacer</button>
     <label class="chkline"><input type="checkbox" id="showbase" checked onchange="render()"> Mostrar línea base (marca de agua)</label>
@@ -143,7 +143,6 @@ td.date input{width:118px}
     <button class="btn" onclick="importJSONc()">⬆ JSON</button>
     <button class="btn" onclick="exportCSV()">⬇ CSV</button>
     <button class="btn" onclick="importCSVc()">⬆ CSV</button>
-    <button class="btn" onclick="importExcelc()">⬆ Excel (MS Project)</button>
     <button class="btn" onclick="resetSeed()">↺ Datos ejemplo</button>
     <button class="btn" onclick="openCloudModal()">☁ Nube</button>
     <button class="btn" id="accbtn" onclick="openAccessModal()" style="display:none">👥 Accesos</button>
@@ -172,7 +171,7 @@ td.date input{width:118px}
   <div class="selrow">
     <label style="font-size:12.5px;font-weight:600;color:#475569">Editando:</label>
     <select id="editsel" onchange="switchP(this.value)"></select>
-    <button class="btn" onclick="addProject()">＋ Obra</button>
+    <button class="btn" onclick="newProjectChooser()">＋ Obra</button>
     <button class="btn primary" onclick="addTask()">＋ Tarea</button>
     <button class="btn" onclick="setBaseline()">📌 Fijar base de esta obra</button>
     <button class="btn" style="background:#16a34a;border-color:#16a34a;color:#fff" onclick="finalizeProject()">✔ Finalizar obra</button>
@@ -491,6 +490,14 @@ function renderEditSelect(){
   sel.innerHTML=STORE.projects.map(p=>`<option value="${p.id}" ${p.id===activeId?'selected':''}>${esc(p.name)}</option>`).join('');
 }
 function switchP(id){activeId=id;render();}
+function newProjectChooser(){openModal(`
+  <h2 style="margin:0 0 6px;font-size:18px">Nueva obra</h2>
+  <p style="color:#64748b;font-size:12.5px;margin-bottom:16px">¿Cómo querés crearla?</p>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <button class="btn" style="justify-content:flex-start;padding:12px 14px" onclick="closeModal();addProject()">📄 &nbsp;<b>Obra en blanco</b> &nbsp;— empezar de cero</button>
+    <button class="btn" style="justify-content:flex-start;padding:12px 14px" onclick="closeModal();importExcelc()">📊 &nbsp;<b>Importar desde Excel</b> &nbsp;(MS Project .xlsx)</button>
+    <button class="btn" style="justify-content:center;margin-top:4px" onclick="closeModal()">Cancelar</button>
+  </div>`);}
 function duplicateProject(){
   const p=proj();if(!p)return;pushHistory();
   const base=(p.name.replace(/[^a-zA-Z0-9]/g,'').slice(0,6).toLowerCase()||'obra')+'c';
