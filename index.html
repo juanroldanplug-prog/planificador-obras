@@ -81,6 +81,12 @@ header .sub{opacity:.8;font-size:12.5px;margin-top:3px}
 .modalbox.wide{max-width:920px;max-height:88vh;overflow:auto}
 .modalbox table th,.modalbox table td{border-bottom:1px solid #eef2f7;padding:5px 8px;text-align:left}
 .fin-badge{display:inline-block;font-size:9px;font-weight:700;background:#dcfce7;color:#166534;padding:2px 7px;border-radius:8px;margin-left:6px}
+.holband{position:absolute;top:0;bottom:0;background:rgba(220,38,38,.07);border-left:1px dashed rgba(220,38,38,.3);z-index:1;pointer-events:none}
+.holchip{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:4px 6px 4px 12px;font-size:12px;margin:0 6px 6px 0}
+.holchip .hx{cursor:pointer;color:#cbd5e1;font-weight:700;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+.holchip .hx:hover{color:#fff;background:#dc2626}
+.loginov{position:fixed;inset:0;background:linear-gradient(120deg,#0f172a,#1e3a8a);display:none;align-items:center;justify-content:center;z-index:500}
+.loginbox{background:#fff;border-radius:16px;padding:34px 40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);max-width:360px}
 .ganttscroll{overflow-x:auto}
 .tablescroll{overflow-x:auto}
 @media(max-width:760px){body{padding:12px}header{padding:14px 16px}header h1{font-size:17px}.ptitle{font-size:13px}.ganttscroll>.axis,.ganttscroll>.gwrap{min-width:760px}.tablescroll>table{min-width:680px}.modalbox{padding:16px}.sbox{min-width:70px}}
@@ -116,6 +122,7 @@ td.date input{width:118px}
   <div><h1>🏗️ Planificador de Obras</h1><div class="sub">Multi-obra · precedencias en cascada · línea base como marca de agua · días hábiles</div></div>
   <div class="hoy" id="hoy">📅 …</div>
 </header>
+<div id="accessbanner"></div>
 
 <div class="panel">
   <div class="ptitle">Resumen general — obras en vista</div>
@@ -138,6 +145,7 @@ td.date input{width:118px}
     <button class="btn" onclick="importCSVc()">⬆ CSV</button>
     <button class="btn" onclick="resetSeed()">↺ Datos ejemplo</button>
     <button class="btn" onclick="openCloudModal()">☁ Nube</button>
+    <button class="btn" id="accbtn" onclick="openAccessModal()" style="display:none">👥 Accesos</button>
     <span class="saveind" id="saveind">guardado ✓</span>
     <span id="cloudind" style="font-size:11.5px;font-weight:600;margin-left:10px"></span>
   </div>
@@ -187,6 +195,11 @@ td.date input{width:118px}
   <div id="archive-body"></div>
 </div>
 
+<div class="panel">
+  <div class="ptitle collapser" onclick="toggleSection('holidays')"><span class="chev" id="holidays-chev">▼</span>🇦🇷 Feriados (días no laborables)</div>
+  <div id="holidays-body"></div>
+</div>
+
 <footer style="text-align:center;color:#94a3b8;font-size:11px;margin:20px 0">Herramienta local · autoguardado en el navegador · export/import CSV·JSON para conectar a tus tablas dinámicas</footer>
 </div>
 <div id="tip"></div>
@@ -194,18 +207,24 @@ td.date input{width:118px}
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
 const SEED = {"projects": [{"id": "ramallo", "name": "Proyecto Ramallo", "color": "#2563eb", "tasks": [{"id": "R1", "name": "Armado de estructura", "dur": 3, "preds": [], "lag": 0, "fixedStart": "2026-06-23", "baseStart": "2026-06-23", "baseEnd": "2026-06-25"}, {"id": "R2", "name": "Colocación de plegados", "dur": 2, "preds": ["R1"], "lag": 0, "fixedStart": null, "baseStart": "2026-06-26", "baseEnd": "2026-06-29"}, {"id": "R3", "name": "Hormigón o en seco", "dur": 3, "preds": ["R2"], "lag": 0, "fixedStart": null, "baseStart": "2026-06-30", "baseEnd": "2026-07-02"}, {"id": "R4", "name": "Tabiquería de acero", "dur": 2, "preds": ["R3"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-03", "baseEnd": "2026-07-06"}, {"id": "R5", "name": "Estructura de techo y cielorraso", "dur": 2, "preds": ["R4"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-07", "baseEnd": "2026-07-08"}, {"id": "R6", "name": "OSB", "dur": 1, "preds": ["R5"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-09", "baseEnd": "2026-07-09"}, {"id": "R7", "name": "Plomería cañerías", "dur": 2, "preds": ["R6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-10", "baseEnd": "2026-07-13"}, {"id": "R8", "name": "Electricidad cañería y cables", "dur": 2, "preds": ["R6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-10", "baseEnd": "2026-07-13"}, {"id": "R9", "name": "Placas de yeso 9mm", "dur": 2, "preds": ["R7", "R8"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-14", "baseEnd": "2026-07-15"}, {"id": "R10", "name": "Aislación termoacústica Celulosa", "dur": 2, "preds": ["R9"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-16", "baseEnd": "2026-07-17"}, {"id": "R11", "name": "Placas de yeso 12mm", "dur": 3, "preds": ["R10"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-20", "baseEnd": "2026-07-22"}, {"id": "R12", "name": "Masillado, cinta y lijado", "dur": 5, "preds": ["R11"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-23", "baseEnd": "2026-07-29"}, {"id": "R13", "name": "Colocación de porcelanato", "dur": 5, "preds": ["R11"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-23", "baseEnd": "2026-07-29"}, {"id": "R14", "name": "Colocación de muebles / placards", "dur": 2, "preds": ["R12", "R13"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-30", "baseEnd": "2026-07-31"}, {"id": "R15", "name": "Mesada", "dur": 1, "preds": ["R14"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-03", "baseEnd": "2026-08-03"}, {"id": "R16", "name": "Pintura interior", "dur": 2, "preds": ["R15"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-04", "baseEnd": "2026-08-05"}, {"id": "R17", "name": "Griferías y sanitarios", "dur": 2, "preds": ["R16"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-06", "baseEnd": "2026-08-07"}, {"id": "R18", "name": "Colocación de luces y sistemas", "dur": 3, "preds": ["R16"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-06", "baseEnd": "2026-08-10"}, {"id": "R19", "name": "Instalación de aislación y fachada", "dur": 3, "preds": ["R6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-10", "baseEnd": "2026-07-14"}, {"id": "R20", "name": "Colocación de plegados cubierta", "dur": 2, "preds": ["R19"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-15", "baseEnd": "2026-07-16"}, {"id": "R21", "name": "Pintura de cubierta Cauchogoma", "dur": 2, "preds": ["R20"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-17", "baseEnd": "2026-07-20"}, {"id": "R22", "name": "Pedido de aberturas", "dur": 30, "preds": ["R6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-10", "baseEnd": "2026-08-20"}, {"id": "R23", "name": "Terminaciones generales", "dur": 5, "preds": ["R22"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-21", "baseEnd": "2026-08-27"}], "visible": true}, {"id": "junin", "name": "Proyecto Junín 1", "color": "#0891b2", "tasks": [{"id": "J1", "name": "Armado de estructura", "dur": 3, "preds": [], "lag": 0, "fixedStart": "2026-07-13", "baseStart": "2026-07-13", "baseEnd": "2026-07-15"}, {"id": "J2", "name": "Colocación de plegados", "dur": 2, "preds": ["J1"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-16", "baseEnd": "2026-07-17"}, {"id": "J3", "name": "Hormigón o en seco", "dur": 3, "preds": ["J2"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-20", "baseEnd": "2026-07-22"}, {"id": "J4", "name": "Tabiquería de acero", "dur": 2, "preds": ["J3"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-23", "baseEnd": "2026-07-24"}, {"id": "J5", "name": "Estructura de techo y cielorraso", "dur": 2, "preds": ["J4"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-27", "baseEnd": "2026-07-28"}, {"id": "J6", "name": "OSB", "dur": 1, "preds": ["J5"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-29", "baseEnd": "2026-07-29"}, {"id": "J7", "name": "Plomería cañerías", "dur": 2, "preds": ["J6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-30", "baseEnd": "2026-07-31"}, {"id": "J8", "name": "Electricidad cañería y cables", "dur": 2, "preds": ["J7"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-03", "baseEnd": "2026-08-04"}, {"id": "J9", "name": "Placas de yeso 9mm", "dur": 2, "preds": ["J8"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-05", "baseEnd": "2026-08-06"}, {"id": "J10", "name": "Aislación termoacústica Celulosa", "dur": 2, "preds": ["J9"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-07", "baseEnd": "2026-08-10"}, {"id": "J11", "name": "Placas de yeso 12mm", "dur": 3, "preds": ["J10"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-11", "baseEnd": "2026-08-13"}, {"id": "J12", "name": "Masillado, cinta y lijado", "dur": 5, "preds": ["J11"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-14", "baseEnd": "2026-08-20"}, {"id": "J13", "name": "Colocación de porcelanato", "dur": 5, "preds": ["J11"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-14", "baseEnd": "2026-08-20"}, {"id": "J14", "name": "Colocación de muebles / placards", "dur": 2, "preds": ["J12", "J13"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-21", "baseEnd": "2026-08-24"}, {"id": "J15", "name": "Mesada", "dur": 1, "preds": ["J14", "J16"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-25", "baseEnd": "2026-08-25"}, {"id": "J16", "name": "Pintura interior", "dur": 2, "preds": ["J12", "J13"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-21", "baseEnd": "2026-08-24"}, {"id": "J17", "name": "Griferías y sanitarios", "dur": 2, "preds": ["J15"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-26", "baseEnd": "2026-08-27"}, {"id": "J18", "name": "Colocación de luces y sistemas", "dur": 3, "preds": ["J14", "J16"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-25", "baseEnd": "2026-08-27"}, {"id": "J19", "name": "Instalación de aislación y fachada", "dur": 3, "preds": ["J6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-30", "baseEnd": "2026-08-03"}, {"id": "J20", "name": "Colocación de plegados cubierta", "dur": 2, "preds": ["J17", "J18"], "lag": 0, "fixedStart": null, "baseStart": "2026-08-28", "baseEnd": "2026-08-31"}, {"id": "J21", "name": "Pintura de cubierta Cauchogoma", "dur": 2, "preds": ["J20"], "lag": 0, "fixedStart": null, "baseStart": "2026-09-01", "baseEnd": "2026-09-02"}, {"id": "J22", "name": "Pedido de aberturas", "dur": 30, "preds": ["J6"], "lag": 0, "fixedStart": null, "baseStart": "2026-07-30", "baseEnd": "2026-09-09"}, {"id": "J23", "name": "Terminaciones generales", "dur": 5, "preds": ["J21"], "lag": 0, "fixedStart": null, "baseStart": "2026-09-03", "baseEnd": "2026-09-09"}], "visible": true}]};
 const LSKEY='ganttObrasV2';
 const STAT={done:['Finalizada','#64748b','#e2e8f0'],now:['En curso','#f59e0b','#fef3c7'],next:['Próxima','#2563eb','#dbeafe']};
 const MESES=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+const DEFAULT_HOLIDAYS_AR=[{date:'2026-01-01',name:'Año Nuevo'},{date:'2026-02-16',name:'Carnaval'},{date:'2026-02-17',name:'Carnaval'},{date:'2026-03-23',name:'Puente turístico'},{date:'2026-03-24',name:'Día de la Memoria'},{date:'2026-04-02',name:'Malvinas'},{date:'2026-04-03',name:'Viernes Santo'},{date:'2026-05-01',name:'Día del Trabajador'},{date:'2026-05-25',name:'Revolución de Mayo'},{date:'2026-06-15',name:'Gral. Güemes (trasladado)'},{date:'2026-06-20',name:'Gral. Belgrano - Día de la Bandera'},{date:'2026-07-09',name:'Día de la Independencia'},{date:'2026-07-10',name:'Puente turístico'},{date:'2026-08-17',name:'Gral. San Martín'},{date:'2026-10-12',name:'Diversidad Cultural'},{date:'2026-11-23',name:'Soberanía Nacional (trasladado)'},{date:'2026-12-07',name:'Puente turístico'},{date:'2026-12-08',name:'Inmaculada Concepción'},{date:'2026-12-25',name:'Navidad'}];
+function ensureHolidays(){if(!STORE.holidays)STORE.holidays=DEFAULT_HOLIDAYS_AR.map(h=>({...h}));if(STORE.holidayPolicy===undefined)STORE.holidayPolicy=true;}
+function policyDroppedSet(){const list=(STORE.holidays||[]);const dates=new Set(list.map(h=>h.date));const drop=new Set();if(STORE.holidayPolicy===false)return drop;list.forEach(h=>{const d=parseISO(h.date);if(d.getDay()===4){const fri=iso(addDays(d,1));if(dates.has(fri)){const a=h.date.slice(5),b=fri.slice(5);const x=m=>(m==='12-25'||m==='01-01');if(!x(a)&&!x(b))drop.add(h.date);}}});return drop;}
+function rebuildHolidays(){const drop=policyDroppedSet();HOLIDAYS_SET=new Set((STORE.holidays||[]).map(h=>h.date).filter(dt=>!drop.has(dt)));}
 let STORE=load();
 let activeId=STORE.projects[0]?STORE.projects[0].id:null;
 
 /* date utils */
 const parseISO=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
 const iso=dt=>dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
-const isWD=dt=>{const w=dt.getDay();return w!==0&&w!==6;};
+let HOLIDAYS_SET=new Set();
+const isWD=dt=>{const w=dt.getDay();if(w===0||w===6)return false;return !HOLIDAYS_SET.has(iso(dt));};
 const addDays=(dt,n)=>{const r=new Date(dt);r.setDate(r.getDate()+n);return r;};
 const snapWD=dt=>{let r=new Date(dt);while(!isWD(r))r=addDays(r,1);return r;};
 function addWD(dt,n){let cur=snapWD(dt);if(n===0)return cur;const step=n>0?1:-1;let c=0;while(c!==n){cur=addDays(cur,step);if(isWD(cur))c+=step;}return cur;}
@@ -252,7 +271,7 @@ const pct=dt=>(dt-GMIN)/86400000/TOTAL*100;
 function visibleProjects(){return STORE.projects.filter(p=>p.visible!==false);}
 
 function render(){
-  const tod=today();
+  const tod=today();ensureHolidays();rebuildHolidays();
   document.getElementById('hoy').textContent='📅 Hoy: '+tod.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   renderToggles();renderEditSelect();
   const showbase=document.getElementById('showbase').checked;
@@ -263,7 +282,7 @@ function render(){
   // range
   let ds=[];
   vis.forEach(p=>{const c=schedByP[p.id].comp;p.tasks.forEach(t=>{if(c[t.id]){ds.push(c[t.id].s);ds.push(c[t.id].f);}if(showbase&&t.baseStart){ds.push(parseISO(t.baseStart));ds.push(parseISO(t.baseEnd));}});});
-  if(!ds.length){document.getElementById('gwrap').innerHTML='<p style="color:#94a3b8;padding:20px">Encendé al menos una obra.</p>';document.getElementById('axis').innerHTML='';renderResumen(schedByP);renderEditor(schedByP);renderLog();renderArchive();applyCollapse();return;}
+  if(!ds.length){document.getElementById('gwrap').innerHTML='<p style="color:#94a3b8;padding:20px">Encendé al menos una obra.</p>';document.getElementById('axis').innerHTML='';renderResumen(schedByP);renderEditor(schedByP);renderLog();renderArchive();renderHolidays();applyCollapse();return;}
   GMIN=addDays(new Date(Math.min(...ds)),-2);GMAX=addDays(new Date(Math.max(...ds)),2);TOTAL=(GMAX-GMIN)/86400000;
   // axis
   let ax='';let cur=new Date(GMIN.getFullYear(),GMIN.getMonth(),1);
@@ -272,6 +291,7 @@ function render(){
   // rows
   const tp=pct(tod);let html='<svg class="arrsvg" id="arrsvg"></svg>';
   html+=(tp>=0&&tp<=100)?`<div class="tline" style="left:calc(230px + (100% - 230px) * ${(tp/100).toFixed(4)})"><span class="tlbl">HOY ${fmt(tod)}</span></div>`:'';
+  (STORE.holidays||[]).forEach(h=>{if(!HOLIDAYS_SET.has(h.date))return;const hd=parseISO(h.date);if(hd>=GMIN&&hd<=GMAX){const fr=pct(hd)/100;html+=`<div class="holband" style="left:calc(230px + (100% - 230px) * ${fr.toFixed(4)});width:calc((100% - 230px) / ${TOTAL})" title="Feriado: ${esc(h.name)} (${fmt(hd)})"></div>`;}});
   vis.forEach(p=>{
     const c=schedByP[p.id].comp;if(schedByP[p.id].err){html+=`<div class="ghead"><div class="glabel"><span style="width:11px;height:11px;border-radius:50%;background:${p.color}"></span>${esc(p.name)}</div><div class="gspan"></div></div>`;return;}
     let ss=[],ff=[],done=0;p.tasks.forEach(t=>{ss.push(c[t.id].s);ff.push(c[t.id].f);if(statusOf(c[t.id].s,c[t.id].f,tod)==='done')done++;});
@@ -295,7 +315,7 @@ function render(){
   });
   document.getElementById('gwrap').innerHTML=html;
   drawArrows(vis,schedByP);attachDrag(schedByP);
-  renderResumen(schedByP);renderEditor(schedByP);renderLog();renderArchive();applyCollapse();save();
+  renderResumen(schedByP);renderEditor(schedByP);renderLog();renderArchive();renderHolidays();applyCollapse();save();
 }
 
 function projStats(p,comp,tod){
@@ -633,7 +653,7 @@ function openModal(html,wide){let ov=document.getElementById('modalov');if(!ov){
 function closeModal(){const ov=document.getElementById('modalov');if(ov)ov.style.display='none';}
 /* colapsables + registro */
 const UI=JSON.parse(localStorage.getItem('ganttUIv1')||'{}');
-function applyCollapse(){['editor','log','archive'].forEach(n=>{const b=document.getElementById(n+'-body');const c=document.getElementById(n+'-chev');if(!b)return;const col=!!UI[n];b.style.display=col?'none':'';if(c)c.parentElement.classList.toggle('collapsed',col);});}
+function applyCollapse(){['editor','log','archive','holidays'].forEach(n=>{const b=document.getElementById(n+'-body');const c=document.getElementById(n+'-chev');if(!b)return;const col=!!UI[n];b.style.display=col?'none':'';if(c)c.parentElement.classList.toggle('collapsed',col);});}
 function toggleSection(n){UI[n]=!UI[n];localStorage.setItem('ganttUIv1',JSON.stringify(UI));applyCollapse();}
 function renderLog(){
   const el=document.getElementById('log-body');if(!el)return;
@@ -653,23 +673,85 @@ function renderArchive(){
 }
 function viewArchive(i){const a=(STORE.archived||[])[i];if(!a)return;openModal(`<div id="reportbody">${a.reportHtml||'<p>Sin informe guardado.</p>'}</div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;border-top:1px solid #eef2f7;padding-top:12px"><button class="btn" onclick="printReport()">🖨 Imprimir</button><button class="btn" onclick="closeModal()">Cerrar</button></div>`,true);}
 function delArchive(i){if(!confirm('¿Quitar esta obra del histórico? No se puede deshacer.'))return;STORE.archived.splice(i,1);save();render();}
+function renderHolidays(){
+  const el=document.getElementById('holidays-body');if(!el)return;
+  const dropped=policyDroppedSet();
+  const hs=(STORE.holidays||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const chips=hs.map((h)=>{const real=(STORE.holidays||[]).indexOf(h);const off=dropped.has(h.date);
+    return `<span class="holchip" style="${off?'opacity:.55;text-decoration:line-through':''}"><b>${fmt(parseISO(h.date))}</b> ${esc(h.name)}${off?' <span style="font-size:9px;text-decoration:none;color:#b45309;font-weight:700">SE TRABAJA</span>':''} <span class="hx" title="Eliminar feriado" onclick="delHoliday(${real})">✕</span></span>`;}).join('');
+  el.innerHTML=`<label class="chkline" style="margin-bottom:10px"><input type="checkbox" ${STORE.holidayPolicy!==false?'checked':''} onchange="togglePolicy(this.checked)"> Política de empresa: en feriados dobles antes del finde, tomar solo el día más cercano al fin de semana (excepto Navidad y Año Nuevo)</label>
+    <div style="margin-bottom:8px">${chips||'<span style="color:#94a3b8;font-size:12.5px">Sin feriados cargados.</span>'}</div>
+    <button class="btn" onclick="addHoliday()">＋ Agregar feriado</button>
+    <button class="btn" onclick="resetHolidays()">↺ Restaurar feriados AR 2026</button>
+    <div class="hint">Los feriados cuentan como <b>días no laborables</b>: el cronograma los saltea igual que los fines de semana. Los marcados <b>«SE TRABAJA»</b> quedan como laborables por la política de empresa. Eliminá los que no apliquen y las fechas se recalculan solas.</div>`;
+}
+function togglePolicy(on){pushHistory();STORE.holidayPolicy=on;rebuildHolidays();render();}
+function addHoliday(){const d=prompt('Fecha del feriado (AAAA-MM-DD):','2026-');if(!d)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){alert('Formato inválido. Usá AAAA-MM-DD, ej. 2026-07-09.');return;}const n=prompt('Nombre del feriado:','Feriado')||'Feriado';pushHistory();if(!STORE.holidays)STORE.holidays=[];if(!STORE.holidays.find(h=>h.date===d))STORE.holidays.push({date:d,name:n});rebuildHolidays();render();}
+function delHoliday(i){const h=(STORE.holidays||[])[i];if(!h)return;pushHistory();STORE.holidays.splice(i,1);rebuildHolidays();render();}
+function resetHolidays(){if(!confirm('Restaurar la lista completa de feriados AR 2026?'))return;pushHistory();STORE.holidays=DEFAULT_HOLIDAYS_AR.map(h=>({...h}));rebuildHolidays();render();}
+
 
 
 
 /* ---- nube (Firebase Firestore) ---- */
-let CLOUD={enabled:false,db:null,code:null,applyingRemote:false,unsub:null,saveTimer:null};
+let CLOUD={enabled:false,db:null,code:null,applyingRemote:false,unsub:null,saveTimer:null,user:null,allowed:[],requests:[],reqUnsub:null};
 function cloudStatus(st){const el=document.getElementById('cloudind');if(!el)return;const m={ok:['☁ sincronizado','#16a34a'],saving:['☁ guardando…','#64748b'],error:['☁ error de nube','#dc2626'],off:['',' #94a3b8']};const v=m[st]||['','#94a3b8'];el.textContent=v[0];el.style.color=v[1];}
 function initCloud(){let cfg=null;try{cfg=JSON.parse(localStorage.getItem('fbConfig')||'null');}catch(e){}const code=localStorage.getItem('fbBoard');
-  if(!cfg||!code||typeof firebase==='undefined'){CLOUD.enabled=false;cloudStatus('off');return;}
-  try{if(!firebase.apps.length)firebase.initializeApp(cfg);CLOUD.db=firebase.firestore();CLOUD.code=code;CLOUD.enabled=true;cloudStatus('saving');subscribeCloud();}
-  catch(e){CLOUD.enabled=false;cloudStatus('error');console.error(e);}}
+  if(!cfg||!code||typeof firebase==='undefined'){CLOUD.enabled=false;cloudStatus('off');hideLoginGate();return;}
+  try{if(!firebase.apps.length)firebase.initializeApp(cfg);CLOUD.db=firebase.firestore();CLOUD.code=code;
+    firebase.auth().onAuthStateChanged(function(u){
+      if(u){CLOUD.user=u;CLOUD.enabled=true;hideLoginGate();hideAccessGate();cloudStatus('saving');subscribeCloud();renderAccessAlert();}
+      else{CLOUD.enabled=false;CLOUD.user=null;cloudStatus('off');showLoginGate();}
+    });
+  }catch(e){CLOUD.enabled=false;cloudStatus('error');console.error(e);}}
+function googleLogin(){try{const prov=new firebase.auth.GoogleAuthProvider();firebase.auth().signInWithPopup(prov).catch(e=>{const m=document.getElementById('loginmsg');if(m)m.textContent='No se pudo iniciar sesión: '+((e&&e.message)||e);});}catch(e){alert('Error de login: '+e);}}
+function googleLogout(){try{if(firebase&&firebase.auth)firebase.auth().signOut();closeModal();}catch(e){}}
+function showLoginGate(){let g=document.getElementById('loginov');if(!g){g=document.createElement('div');g.id='loginov';g.className='loginov';g.innerHTML='<div class="loginbox"><div style="font-size:36px">🏗️</div><h2 style="margin:8px 0 4px;font-size:20px">Planificador de Obras</h2><p style="color:#64748b;font-size:13px;margin-bottom:20px">Este tablero está protegido.<br>Iniciá sesión con Google para continuar.</p><button class="btn primary" style="padding:11px 20px;font-size:14px" onclick="googleLogin()">Iniciar sesión con Google</button><p id="loginmsg" style="color:#dc2626;font-size:12px;margin-top:14px"></p></div>';document.body.appendChild(g);}g.style.display='flex';}
+function hideLoginGate(){const g=document.getElementById('loginov');if(g)g.style.display='none';}
+function showAccessGate(){let g=document.getElementById('accessov');if(!g){g=document.createElement('div');g.id='accessov';g.className='loginov';document.body.appendChild(g);}
+  const em=(CLOUD.user&&CLOUD.user.email)||'';
+  g.innerHTML='<div class="loginbox"><div style="font-size:34px">🔒</div><h2 style="margin:8px 0 4px;font-size:19px">Acceso restringido</h2><p style="color:#64748b;font-size:13px;margin-bottom:6px">La cuenta<br><b>'+esc(em)+'</b><br>todavía no tiene acceso a este tablero.</p><button class="btn primary" style="padding:10px 18px;margin-top:10px" onclick="requestAccess()">Pedir acceso</button> <button class="btn" style="padding:10px 14px" onclick="googleLogout()">Cambiar de cuenta</button><p id="accessmsg" style="font-size:12px;margin-top:12px;color:#64748b"></p></div>';
+  g.style.display='flex';}
+function hideAccessGate(){const g=document.getElementById('accessov');if(g)g.style.display='none';}
+function requestAccess(){if(!CLOUD.db||!CLOUD.user){return;}const u=CLOUD.user;const m=document.getElementById('accessmsg');if(m){m.style.color='#64748b';m.textContent='Enviando…';}
+  CLOUD.db.collection('requests').add({board:CLOUD.code,email:u.email||'',name:u.displayName||'',ts:Date.now()})
+   .then(()=>{if(m){m.style.color='#16a34a';m.textContent='✅ Solicitud enviada. Cuando te aprueben, volvé a ingresar.';}})
+   .catch(e=>{if(m){m.style.color='#dc2626';m.textContent='No se pudo enviar: '+((e&&e.message)||e);}});}
+function subscribeRequests(){if(CLOUD.reqUnsub){return;}
+  try{CLOUD.reqUnsub=CLOUD.db.collection('requests').where('board','==',CLOUD.code).onSnapshot(qs=>{CLOUD.requests=[];qs.forEach(d=>{const o=d.data();CLOUD.requests.push({id:d.id,email:o.email,name:o.name,ts:o.ts});});renderAccessAlert();},err=>{console.error('req',err);});}catch(e){console.error(e);}}
+function renderAccessAlert(){
+  const btn=document.getElementById('accbtn');if(btn){btn.style.display=CLOUD.enabled?'':'none';btn.textContent='👥 Accesos'+(CLOUD.requests.length?(' ('+CLOUD.requests.length+')'):'');btn.style.background=CLOUD.requests.length?'#f59e0b':'';btn.style.color=CLOUD.requests.length?'#fff':'';btn.style.borderColor=CLOUD.requests.length?'#f59e0b':'';}
+  const ban=document.getElementById('accessbanner');if(!ban)return;
+  if(CLOUD.enabled&&CLOUD.requests.length){ban.innerHTML='<div style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:600">🔔 '+CLOUD.requests.length+' solicitud(es) de acceso pendiente(s). <a href="#" style="color:#b45309" onclick="openAccessModal();return false;">Revisar</a></div>';}
+  else ban.innerHTML='';}
+function openAccessModal(){
+  if(!CLOUD.enabled){alert('Conectá la nube primero (☁ Nube).');return;}
+  const allowed=CLOUD.allowed||[];
+  const allowRows=allowed.length?allowed.map(e=>`<tr><td>${esc(e)}</td><td style="text-align:right"><button class="btn danger" style="padding:3px 9px" onclick="removeAllowed('${esc(e)}')">Quitar</button></td></tr>`).join(''):'<tr><td colspan="2" style="color:#94a3b8">Sin cuentas cargadas.</td></tr>';
+  const reqRows=CLOUD.requests.length?CLOUD.requests.map(r=>`<tr><td><b>${esc(r.email)}</b>${r.name?' · '+esc(r.name):''}</td><td style="text-align:right;white-space:nowrap"><button class="btn" style="padding:3px 9px;background:#16a34a;border-color:#16a34a;color:#fff" onclick="approveRequest('${r.id}','${esc(r.email)}')">Aprobar</button> <button class="btn danger" style="padding:3px 9px" onclick="rejectRequest('${r.id}')">Rechazar</button></td></tr>`).join(''):'<tr><td colspan="2" style="color:#94a3b8">No hay solicitudes pendientes.</td></tr>';
+  openModal(`<h2 style="margin:0 0 6px;font-size:18px">👥 Gestión de accesos</h2>
+    <h3 style="font-size:13px;margin:12px 0 6px;color:#334155">Solicitudes pendientes</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px">${reqRows}</table>
+    <h3 style="font-size:13px;margin:16px 0 6px;color:#334155">Cuentas autorizadas</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px">${allowRows}</table>
+    <div style="margin-top:12px"><button class="btn primary" onclick="addAllowed()">＋ Agregar cuenta</button></div>
+    <p style="font-size:11px;color:#94a3b8;margin-top:10px">Aprobar agrega el email a las cuentas autorizadas (necesita que las reglas usen la lista <b>allowed</b> del tablero).</p>
+    <div style="text-align:right;margin-top:10px"><button class="btn" onclick="closeModal()">Cerrar</button></div>`,true);}
+function approveRequest(id,email){if(!CLOUD.db)return;
+  CLOUD.db.collection('boards').doc(CLOUD.code).set({allowed:firebase.firestore.FieldValue.arrayUnion(email)},{merge:true})
+   .then(()=>CLOUD.db.collection('requests').doc(id).delete())
+   .then(()=>{if(!CLOUD.allowed.includes(email))CLOUD.allowed.push(email);openAccessModal();})
+   .catch(e=>alert('No se pudo aprobar: '+((e&&e.message)||e)));}
+function rejectRequest(id){if(!CLOUD.db)return;CLOUD.db.collection('requests').doc(id).delete().then(()=>openAccessModal()).catch(e=>alert('Error: '+((e&&e.message)||e)));}
+function addAllowed(){const e=(prompt('Email de la cuenta de Google a autorizar:','')||'').trim();if(!e)return;CLOUD.db.collection('boards').doc(CLOUD.code).set({allowed:firebase.firestore.FieldValue.arrayUnion(e)},{merge:true}).then(()=>{if(!CLOUD.allowed.includes(e))CLOUD.allowed.push(e);openAccessModal();}).catch(err=>alert('No se pudo: '+((err&&err.message)||err)));}
+function removeAllowed(e){if(!confirm('¿Quitar el acceso de '+e+'?'))return;CLOUD.db.collection('boards').doc(CLOUD.code).set({allowed:firebase.firestore.FieldValue.arrayRemove(e)},{merge:true}).then(()=>{CLOUD.allowed=CLOUD.allowed.filter(x=>x!==e);openAccessModal();}).catch(err=>alert('No se pudo: '+((err&&err.message)||err)));}
 function subscribeCloud(){if(CLOUD.unsub){CLOUD.unsub();CLOUD.unsub=null;}
   CLOUD.unsub=CLOUD.db.collection('boards').doc(CLOUD.code).onSnapshot(doc=>{
-    if(doc.exists){const d=doc.data();if(d&&d.store){CLOUD.applyingRemote=true;try{STORE=JSON.parse(d.store);}catch(e){}if(!STORE.projects||!STORE.projects.find(p=>p.id===activeId))activeId=(STORE.projects&&STORE.projects[0])?STORE.projects[0].id:null;render();CLOUD.applyingRemote=false;cloudStatus('ok');}}
+    if(doc.exists){const d=doc.data();CLOUD.allowed=d.allowed||[];subscribeRequests();if(d&&d.store){CLOUD.applyingRemote=true;try{STORE=JSON.parse(d.store);}catch(e){}if(!STORE.projects||!STORE.projects.find(p=>p.id===activeId))activeId=(STORE.projects&&STORE.projects[0])?STORE.projects[0].id:null;render();CLOUD.applyingRemote=false;cloudStatus('ok');}}
     else{cloudPush(true);}
-  },err=>{cloudStatus('error');console.error(err);});}
+  },err=>{cloudStatus('error');console.error(err);if(err&&err.code==='permission-denied'){showAccessGate();}});}
 function cloudPush(force){if(!CLOUD.enabled)return;if(CLOUD.applyingRemote&&!force)return;clearTimeout(CLOUD.saveTimer);
-  CLOUD.saveTimer=setTimeout(()=>{cloudStatus('saving');CLOUD.db.collection('boards').doc(CLOUD.code).set({store:JSON.stringify(STORE),updated:Date.now()}).then(()=>cloudStatus('ok')).catch(e=>{cloudStatus('error');console.error(e);});},700);}
+  CLOUD.saveTimer=setTimeout(()=>{cloudStatus('saving');CLOUD.db.collection('boards').doc(CLOUD.code).set({store:JSON.stringify(STORE),updated:Date.now()},{merge:true}).then(()=>cloudStatus('ok')).catch(e=>{cloudStatus('error');console.error(e);});},700);}
 function openCloudModal(){const cfg=localStorage.getItem('fbConfig')||'';const code=localStorage.getItem('fbBoard')||'';
   openModal(`
    <h2 style="margin:0 0 6px;font-size:18px">☁ Sincronización en la nube</h2>
@@ -683,7 +765,8 @@ function openCloudModal(){const cfg=localStorage.getItem('fbConfig')||'';const c
      <button class="btn primary" onclick="cloudConnect()">Conectar y sincronizar</button>
      <button class="btn" onclick="closeModal()">Cerrar</button>
    </div>
-   <p style="font-size:11px;color:#94a3b8;margin-top:10px">${CLOUD.enabled?'✅ Conectado al tablero <b>'+esc(CLOUD.code)+'</b>':'¿No tenés el proyecto todavía? Seguí la guía «Guia_Firebase.md».'}</p>`);}
+   <p style="font-size:11px;color:#94a3b8;margin-top:10px">${CLOUD.enabled?'✅ Conectado al tablero <b>'+esc(CLOUD.code)+'</b>':'¿No tenés el proyecto todavía? Seguí la guía «Guia_Firebase.md».'}</p>
+   ${(CLOUD.user)?`<p style="font-size:11.5px;color:#334155;margin-top:8px;border-top:1px solid #eef2f7;padding-top:10px">👤 Sesión: <b>${esc(CLOUD.user.email||'')}</b> &nbsp;<button class="btn" style="padding:3px 9px;font-size:11px" onclick="googleLogout()">Cerrar sesión</button></p>`:''}`);}
 function cloudConnect(){const raw=document.getElementById('fbcfg').value.trim();const code=document.getElementById('fbcode').value.trim();
   if(!raw||!code){alert('Completá la config y el código de tablero.');return;}
   let cfg;const clean=raw.replace(/^\s*(const|var|let)\s+\w+\s*=\s*/,'').replace(/;\s*$/,'');
@@ -710,6 +793,7 @@ document.addEventListener('mouseout',e=>{if(e.target.closest('.bar'))tip.style.o
 window.addEventListener('resize',()=>{const vis=visibleProjects();const sb={};STORE.projects.forEach(p=>sb[p.id]=schedule(p));drawArrows(vis,sb);});
 setInterval(()=>render(),30*60*1000);
 purgeExpired();
+if(typeof ensureHolidays==="function")ensureHolidays();
 render();
 if(typeof initCloud==="function")initCloud();
 </script></body></html>
