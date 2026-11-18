@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <title>Planificador de Obras — Gantt</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -44,6 +45,16 @@ header .sub{opacity:.8;font-size:12.5px;margin-top:3px}
 .gtrack{position:relative;flex:1;height:100%}
 .ghost{position:absolute;top:9px;height:12px;border-radius:4px;background:repeating-linear-gradient(45deg,#e2e8f0,#e2e8f0 3px,#f1f5f9 3px,#f1f5f9 6px);border:1px solid #cbd5e1;z-index:3;opacity:.9}
 .bar{position:absolute;top:6px;height:18px;border-radius:5px;display:flex;align-items:center;padding:0 6px;overflow:hidden;cursor:grab;transition:filter .12s,box-shadow .12s;z-index:4}
+.barfill{position:absolute;left:0;top:0;bottom:0;background:rgba(0,0,0,.22);border-radius:5px 0 0 5px;z-index:0}
+.scaret{cursor:pointer;color:#94a3b8;font-size:11px;user-select:none;width:12px;display:inline-block;text-align:center}
+.subrow>td{background:#f8fafc;padding:0}
+.subwrap{padding:8px 10px 10px 34px;display:flex;flex-direction:column;gap:5px}
+.subitem{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.subitem input[type=checkbox]{width:15px;height:15px;cursor:pointer;flex-shrink:0}
+.subname{flex:1 1 180px;min-width:160px;border:1px solid #cbd5e1;border-radius:6px;padding:5px 8px;font-size:12.5px;font-family:inherit;background:#fff}
+.subname:hover{border-color:#e2e8f0}.subname:focus{border-color:#2563eb;outline:none;background:#fff}
+.subdue{border:1px solid #e2e8f0;border-radius:6px;padding:3px 6px;font-size:11.5px;font-family:inherit}
+.subdel{cursor:pointer;color:#cbd5e1;font-size:13px}.subdel:hover{color:#dc2626}
 .bar:hover{filter:brightness(1.05);box-shadow:0 3px 8px rgba(0,0,0,.18);z-index:6}
 .bar.drag{cursor:grabbing;box-shadow:0 4px 12px rgba(0,0,0,.28);z-index:7}
 .bar.done{background:#cbd5e1}
@@ -201,7 +212,7 @@ td.date input{width:118px}
   <div id="holidays-body"></div>
 </div>
 
-<footer style="text-align:center;color:#94a3b8;font-size:11px;margin:20px 0">Herramienta local · autoguardado en el navegador · export/import CSV·JSON para conectar a tus tablas dinámicas</footer>
+<footer style="text-align:center;color:#94a3b8;font-size:11px;margin:20px 0">Herramienta local · autoguardado + nube · export/import CSV·JSON · <b>versión 2026.11.18</b></footer>
 </div>
 <div id="tip"></div>
 <input type="file" id="fileimp" accept=".json,.csv" style="display:none">
@@ -312,7 +323,7 @@ function render(){
       html+=`<div class="grow"><div class="gname" title="${esc(t.name)}"><b>${t.id}</b>${esc(t.name)}</div>
         <div class="gtrack">${ghost}<div class="bar ${st}${anc?' anchor':''}" data-p="${p.id}" data-id="${t.id}"
           style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;background:${st==='next'?p.color:''}"
-          data-n="${esc(t.name)}" data-s="${fmt(s)}" data-e="${fmt(f)}" data-d="${t.dur}" data-st="${st}" data-anc="${anc?1:0}" data-pn="${esc(p.name)}">
+          data-n="${esc(t.name)}" data-s="${fmt(s)}" data-e="${fmt(f)}" data-d="${t.dur}" data-st="${st}" data-anc="${anc?1:0}" data-pn="${esc(p.name)}">${subFill(t)}
           <span class="bdate">${fmt(s)}–${fmt(f)}</span></div></div></div>`;
     });
   });
@@ -355,11 +366,19 @@ function renderResumen(schedByP){
   sumEl.innerHTML=h;
   const days=parseInt((document.getElementById("horizonsel")||{}).value)||7;const horizon=addDays(tod,days);let items=[];
   vis.forEach(p=>{const r=schedByP[p.id];if(r.err)return;
-    p.tasks.forEach(t=>{const c=r.comp[t.id];if(!c)return;if(c.s<=horizon&&c.f>=tod)items.push({p,t,s:c.s,f:c.f,st:statusOf(c.s,c.f,tod)});});
+    p.tasks.forEach(t=>{const c=r.comp[t.id];if(!c)return;if(c.s<=horizon&&c.f>=tod)items.push({p,t,s:c.s,f:c.f,st:statusOf(c.s,c.f,tod)});
+      (t.subs||[]).forEach(sb=>{if(sb.due&&!sb.done){const dd=parseISO(sb.due);if(dd<=horizon)items.push({p,t,sub:sb,s:dd,over:dd<tod});}});});
   });
   items.sort((a,b)=>a.s-b.s||a.p.name.localeCompare(b.p.name));
-  if(!items.length){n7.innerHTML='<p style="color:#94a3b8;font-size:12.5px">No hay tareas activas en los próximos 7 días.</p>';return;}
-  n7.innerHTML=items.map(it=>{const[lbl,col,soft]=STAT[it.st];
+  if(!items.length){n7.innerHTML='<p style="color:#94a3b8;font-size:12.5px">No hay tareas ni subtareas para los próximos días.</p>';return;}
+  n7.innerHTML=items.map(it=>{
+    if(it.sub){const col=it.over?'#dc2626':'#7c3aed';const soft=it.over?'#fef2f2':'#f3e8ff';
+      return `<div class="n7card" style="border-left-color:${it.p.color}">
+        <div class="n7tag" style="background:${soft};color:${col}">${it.over?'⚠ Subtarea vencida':'☑ Subtarea'}</div>
+        <div class="n7name">${esc(it.sub.name||'')}</div>
+        <div class="n7meta"><span class="cdot" style="background:${it.p.color}"></span>${esc(it.p.name)} · ${esc(it.t.name)}</div>
+        <div class="n7date" style="${it.over?'color:#dc2626':''}">Límite: ${fmt(it.s)}</div></div>`;}
+    const[lbl,col,soft]=STAT[it.st];
     return `<div class="n7card" style="border-left-color:${it.p.color}">
       <div class="n7tag" style="background:${soft};color:${col}">${lbl}</div>
       <div class="n7name">${esc(it.t.name)}</div>
@@ -425,7 +444,7 @@ function renderEditor(schedByP){
     h+=`<tr${rowStyle}>
       <td><div class="ord"><button onclick="moveTask('${t.id}',-1)" ${i===0?'disabled':''}>▲</button><button onclick="moveTask('${t.id}',1)" ${i===p.tasks.length-1?'disabled':''}>▼</button></div></td>
       <td style="color:#94a3b8;font-weight:700">${t.id}</td>
-      <td><input value="${esc(t.name)}" onchange="setField('${t.id}','name',this.value)"></td>
+      <td><div style="display:flex;align-items:center;gap:6px"><span class="scaret" onclick="toggleExpand('${p.id}','${t.id}')" title="Subtareas">${EXPANDED.has(p.id+'::'+t.id)?'▾':'▸'}</span><input value="${esc(t.name)}" onchange="setField('${t.id}','name',this.value)" style="flex:1"></div>${subProgHtml(t)}</td>
       <td class="num"><input type="number" min="1" value="${t.dur}" onchange="setField('${t.id}','dur',parseInt(this.value)||1)"></td>
       <td class="pred"><input value="${t.preds.join(',')}"${predStyle} placeholder="—" onchange="setPreds('${t.id}',this.value)"></td>
       <td class="num">${anc?'<span class="ro">—</span>':`<input type="number" value="${t.lag||0}" onchange="setField('${t.id}','lag',parseInt(this.value)||0)">`}</td>
@@ -435,6 +454,7 @@ function renderEditor(schedByP){
       <td>${badge}</td>
       <td class="tdel" onclick="delTask('${t.id}')" title="Eliminar">✕</td>
     </tr>`;
+    if(EXPANDED.has(p.id+'::'+t.id))h+=subRowHtml(p,t);
   });
   tb.innerHTML=h;
 }
@@ -737,6 +757,18 @@ function openModal(html,wide){let ov=document.getElementById('modalov');if(!ov){
 function closeModal(){const ov=document.getElementById('modalov');if(ov)ov.style.display='none';}
 /* colapsables + registro */
 const UI=JSON.parse(localStorage.getItem('ganttUIv1')||'{}');
+const EXPANDED=new Set();
+function subProgress(t){const s=t.subs||[];const total=s.length;const done=s.filter(x=>x.done).length;return{done,total,pct:total?Math.round(done/total*100):0};}
+function subFill(t){if(!t.subs||!t.subs.length)return '';return `<div class="barfill" style="width:${subProgress(t).pct}%"></div>`;}
+function subProgHtml(t){const s=t.subs||[];if(!s.length)return '';const pr=subProgress(t);const tod=today();const over=s.some(x=>!x.done&&x.due&&parseISO(x.due)<tod);const col=pr.pct===100?'#16a34a':'#2563eb';return `<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><div style="flex:1;height:5px;background:#eef2f7;border-radius:3px;overflow:hidden"><div style="width:${pr.pct}%;height:100%;background:${col}"></div></div><span style="font-size:10px;color:#64748b;font-weight:600">${pr.done}/${pr.total}${over?' <span style=\'color:#dc2626\' title=\'Subtarea vencida\'>⚠</span>':''}</span></div>`;}
+function subRowHtml(p,t){const s=t.subs||[];const tod=today();const items=s.map((x,idx)=>{const overdue=(!x.done&&x.due&&parseISO(x.due)<tod);return `<div class="subitem"><input type="checkbox" ${x.done?'checked':''} onchange="toggleSub('${t.id}',${idx})"><input class="subname" value="${esc(x.name||'')}" placeholder="Nombre de la subtarea" onchange="setSubName('${t.id}',${idx},this.value)" style="${x.done?'text-decoration:line-through;color:#94a3b8':''}"><input type="date" class="subdue" value="${x.due||''}" onchange="setSubDue('${t.id}',${idx},this.value)" title="Fecha límite (opcional)" style="${overdue?'color:#dc2626;border-color:#fca5a5':''}"><span class="subdel" onclick="delSub('${t.id}',${idx})" title="Eliminar">✕</span></div>`;}).join('');return `<tr class="subrow"><td></td><td colspan="10"><div class="subwrap">${items||'<span style="color:#94a3b8;font-size:12px">Sin subtareas todavía.</span>'}<div><button class="btn" style="padding:3px 10px;font-size:11.5px" onclick="addSub('${t.id}')">＋ Subtarea</button></div></div></td></tr>`;}
+function _tk(id){return proj().tasks.find(z=>z.id===id);}
+function toggleExpand(pid,id){const k=pid+'::'+id;if(EXPANDED.has(k))EXPANDED.delete(k);else EXPANDED.add(k);render();}
+function addSub(id){const t=_tk(id);if(!t)return;const n=(prompt('Nombre de la subtarea:','')||'').trim()||'Subtarea';pushHistory();if(!t.subs)t.subs=[];t.subs.push({name:n,done:false,due:null});EXPANDED.add(proj().id+'::'+id);render();}
+function toggleSub(id,idx){const t=_tk(id);if(!t||!t.subs||!t.subs[idx])return;pushHistory();t.subs[idx].done=!t.subs[idx].done;render();}
+function setSubName(id,idx,v){const t=_tk(id);if(!t||!t.subs||!t.subs[idx])return;pushHistory();t.subs[idx].name=v;render();}
+function setSubDue(id,idx,v){const t=_tk(id);if(!t||!t.subs||!t.subs[idx])return;pushHistory();t.subs[idx].due=v||null;render();}
+function delSub(id,idx){const t=_tk(id);if(!t||!t.subs)return;pushHistory();t.subs.splice(idx,1);render();}
 function applyCollapse(){['editor','log','archive','holidays'].forEach(n=>{const b=document.getElementById(n+'-body');const c=document.getElementById(n+'-chev');if(!b)return;const col=!!UI[n];b.style.display=col?'none':'';if(c)c.parentElement.classList.toggle('collapsed',col);});}
 function toggleSection(n){UI[n]=!UI[n];localStorage.setItem('ganttUIv1',JSON.stringify(UI));applyCollapse();}
 function renderLog(){
